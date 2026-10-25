@@ -5,7 +5,7 @@ const read = name => fs.readFileSync(new URL('../' + name, import.meta.url), 'ut
 const project = read('ios/App/App.xcodeproj/project.pbxproj')
 const plist = read('ios/App/App/Info.plist')
 const bridge = read('ios/App/App/AppBridgeViewController.swift')
-for (const name of ['NativePlayerPlugin', 'BiliBridgePlugin', 'BiliNetwork', 'MediaResourceLoader', 'AppBridgeViewController']) {
+for (const name of ['NativePlayerPlugin', 'BiliBridgePlugin', 'BiliNetwork', 'MediaResourceLoader', 'PlaybackAudioSession', 'AppBridgeViewController']) {
   assert.ok(project.includes(name + '.swift in Sources'), name + ' must be compiled into the iOS target')
 }
 assert.match(plist, /UIBackgroundModes[\s\S]*?<string>audio<\/string>/)

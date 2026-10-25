@@ -34,6 +34,8 @@ jobs:
         run: npm run ios:sync
       - name: Check native project configuration
         run: npm run verify:project
+      - name: Test audio session, CDN fallback and native AAC playback on iOS
+        run: bash scripts/test-ios-playback.sh
       - name: Compile unsigned iPhone IPA
         run: bash scripts/build-unsigned-ipa.sh
       - name: Upload IPA for sideload signing
@@ -43,6 +45,7 @@ jobs:
           path: |
             build/BiliMusic-iOS-unsigned.ipa
             build/SHA256SUMS.txt
+            build/native-tests.log
             SIDELOAD.md
           if-no-files-found: error
           retention-days: 14
@@ -51,5 +54,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-build-log
-          path: build/xcodebuild.log
+          path: |
+            build/xcodebuild.log
+            build/native-tests.log
           if-no-files-found: ignore

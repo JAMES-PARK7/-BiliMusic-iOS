@@ -17,12 +17,45 @@ enum BiliPolicy {
         return url
     }
     static func mediaURL(_ value: String) throws -> URL {
-        guard let url = URL(string: value), url.scheme == "https", let host = url.host?.lowercased(),
+        let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let address = value.hasPrefix("//") ? "https:" + value : value
+        guard var parts = URLComponents(string: address), let scheme = parts.scheme?.lowercased(),
+              ["http", "https"].contains(scheme), let host = parts.host?.lowercased(),
               ["bilivideo.com", "bilivideo.cn", "akamaized.net", "bilibili.com"].contains(where: { matches(host, $0) }),
-              url.user == nil, url.password == nil, url.port == nil || url.port == 443 else {
+              parts.user == nil, parts.password == nil,
+              parts.port == nil || parts.port == 443 || (scheme == "http" && parts.port == 80) else {
             throw BiliError.message("音频地址不受支持")
         }
+        // Upgrade an official HTTP endpoint without rebuilding its signed query.
+        parts.scheme = "https"
+        if parts.port == 80 { parts.port = nil }
+        guard let url = parts.url else { throw BiliError.message("音频地址无效") }
         return url
+    }
+    static func audioSources(_ play: [String: Any]) throws -> [URL] {
+        guard let dash = play["dash"] as? [String: Any], let streams = dash["audio"] as? [[String: Any]], !streams.isEmpty else {
+            throw BiliError.message("此视频没有可用的独立音轨")
+        }
+        let compatible = streams.filter { stream in
+            let mime = (stream["mimeType"] ?? stream["mime_type"]) as? String ?? ""
+            let codec = stream["codecs"] as? String ?? ""
+            return codec.lowercased().hasPrefix("mp4a") || (mime.lowercased() == "audio/mp4" && !codec.lowercased().contains("opus")) || (mime.isEmpty && codec.isEmpty)
+        }.sorted { number($0["bandwidth"]) > number($1["bandwidth"]) }
+        guard !compatible.isEmpty else { throw BiliError.message("此视频没有 iPhone 支持的音轨") }
+        var urls: [URL] = []
+        var seen: Set<String> = []
+        for stream in compatible {
+            var addresses = [stream["baseUrl"], stream["base_url"]].compactMap { $0 as? String }
+            addresses += stream["backupUrl"] as? [String] ?? []
+            addresses += stream["backup_url"] as? [String] ?? []
+            // Bilibili may choose an MCDN primary on port 8082. Its official
+            // HTTPS/443 backup is suitable for the iPhone resource loader.
+            for address in addresses {
+                if let url = try? mediaURL(address), seen.insert(url.absoluteString).inserted { urls.append(url) }
+            }
+        }
+        guard !urls.isEmpty else { throw BiliError.message("没有兼容的音频线路，请重新播放") }
+        return urls
     }
     static func request(_ url: URL) -> URLRequest {
         var request = URLRequest(url: url, timeoutInterval: 30)
@@ -109,6 +142,11 @@ actor BiliNetwork {
     }
 
     func resolve(_ track: BiliTrack) async throws -> URL {
+        let sources = try await resolveSources(track)
+        return sources[0]
+    }
+
+    func resolveSources(_ track: BiliTrack) async throws -> [URL] {
         var query: [String: String] = [:]
         do {
             let detail = try await api("/x/web-interface/view", query: ["bvid": track.bvid])
@@ -121,10 +159,7 @@ actor BiliNetwork {
         }
         query.merge(["qn": "0", "fnver": "0", "fnval": "16", "fourk": "1"]) { old, _ in old }
         let play = try await api("/x/player/playurl", query: query)
-        guard let dash = play["dash"] as? [String: Any], let audio = dash["audio"] as? [[String: Any]],
-              let best = audio.max(by: { BiliPolicy.number($0["bandwidth"]) < BiliPolicy.number($1["bandwidth"]) }),
-              let source = (best["baseUrl"] ?? best["base_url"]) as? String else { throw BiliError.message("此视频没有可用的独立音轨") }
-        return try BiliPolicy.mediaURL(source)
+        return try BiliPolicy.audioSources(play)
     }
 
     func download(_ track: BiliTrack) async throws -> (URL, Int64) {

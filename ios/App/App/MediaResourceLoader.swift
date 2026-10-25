@@ -17,7 +17,13 @@ final class MediaResourceLoader: NSObject, AVAssetResourceLoaderDelegate, URLSes
     }
     private var transfers: [Int: Transfer] = [:]
     private var tasks: [Int: URLSessionDataTask] = [:]
-    private lazy var session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
+    private let configuration: URLSessionConfiguration
+    private lazy var session = URLSession(configuration: configuration, delegate: self, delegateQueue: .main)
+
+    init(configuration: URLSessionConfiguration = .default) {
+        self.configuration = configuration
+        super.init()
+    }
 
     func asset(_ url: URL) -> AVURLAsset {
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
@@ -64,7 +70,10 @@ final class MediaResourceLoader: NSObject, AVAssetResourceLoaderDelegate, URLSes
         if let info = transfer.loading.contentInformationRequest {
             let total = http.value(forHTTPHeaderField: "Content-Range")?.split(separator: "/").last.flatMap { Int64($0) }
             info.contentLength = total ?? max(0, response.expectedContentLength + (http.statusCode == 206 ? transfer.start : 0))
-            info.contentType = UTType(mimeType: response.mimeType ?? "audio/mp4")?.identifier ?? "public.mpeg-4-audio"
+            // These URLs are AAC-in-MP4 tracks. Some official CDNs label them
+            // application/octet-stream or video/mp4, which is not a usable
+            // audio format hint for AVPlayer's custom resource loader.
+            info.contentType = UTType.mpeg4Audio.identifier
             info.isByteRangeAccessSupported = http.statusCode == 206 || http.value(forHTTPHeaderField: "Accept-Ranges")?.lowercased() == "bytes"
         }
         if http.statusCode == 200 { transfer.skip = transfer.start }

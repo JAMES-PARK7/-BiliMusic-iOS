@@ -17,3 +17,6 @@ ios/**/DerivedData/
 *.p12
 *.mobileprovision
 *.key
+/.build/
+/.swiftpm/
+/native-tests/Fixtures/tone.m4a

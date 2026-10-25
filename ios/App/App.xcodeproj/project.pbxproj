@@ -21,6 +21,7 @@
 		5570A641BE6A45D4948C8145 /* NativePlayerPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E34E61A52985425793398BC3 /* NativePlayerPlugin.swift */; };
 		74BF85BB29D1498DAD3DF79E /* BiliBridgePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09FF4FFBDB04D8685887B0A /* BiliBridgePlugin.swift */; };
 		C23D413B436D42DBAFD779D2 /* AppBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90B93498067497AAE403B87 /* AppBridgeViewController.swift */; };
+		CF567EC0EA2740ACBF81DE42 /* PlaybackAudioSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFFBE0D9E2364FF9A52144CD /* PlaybackAudioSession.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +41,7 @@
 		E34E61A52985425793398BC3 /* NativePlayerPlugin.swift */ = {isa = PBXFileReference; name = "NativePlayerPlugin.swift"; path = "NativePlayerPlugin.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; includeInIndex = 0; };
 		D09FF4FFBDB04D8685887B0A /* BiliBridgePlugin.swift */ = {isa = PBXFileReference; name = "BiliBridgePlugin.swift"; path = "BiliBridgePlugin.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; includeInIndex = 0; };
 		B90B93498067497AAE403B87 /* AppBridgeViewController.swift */ = {isa = PBXFileReference; name = "AppBridgeViewController.swift"; path = "AppBridgeViewController.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; includeInIndex = 0; };
+		BFFBE0D9E2364FF9A52144CD /* PlaybackAudioSession.swift */ = {isa = PBXFileReference; name = "PlaybackAudioSession.swift"; path = "PlaybackAudioSession.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,6 +90,7 @@
 				E34E61A52985425793398BC3 /* NativePlayerPlugin.swift */,
 				D09FF4FFBDB04D8685887B0A /* BiliBridgePlugin.swift */,
 				B90B93498067497AAE403B87 /* AppBridgeViewController.swift */,
+				BFFBE0D9E2364FF9A52144CD /* PlaybackAudioSession.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -180,6 +183,7 @@
 				5570A641BE6A45D4948C8145 /* NativePlayerPlugin.swift in Sources */,
 				74BF85BB29D1498DAD3DF79E /* BiliBridgePlugin.swift in Sources */,
 				C23D413B436D42DBAFD779D2 /* AppBridgeViewController.swift in Sources */,
+				CF567EC0EA2740ACBF81DE42 /* PlaybackAudioSession.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -320,14 +324,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.hanversion.bilimusic.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -342,14 +346,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hanversion.bilimusic.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";

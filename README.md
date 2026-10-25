@@ -10,6 +10,10 @@
 
 ## 云编译 IPA
 
+1.0.1 修正了播放音频会话的参数组合，改为选择兼容的官方 HTTPS 主/备用音频线路，并在解码时为 CDN 返回的二进制内容指定正确的 AAC/MP4 类型。
+
+云编译会先在 iOS 模拟器验证音频会话启动、CDN 地址选择，以及原生 AVPlayer 对带 Range 响应的 AAC 音频的加载、播放和定位，再生成安装包。
+
 在 GitHub 的 Actions 页面运行 **Build iOS sideload IPA**。构建成功后，在该次运行的 Artifacts 下载 **BiliMusic-iOS-sideload**。
 
 得到的 `BiliMusic-iOS-unsigned.ipa` 需要通过 AltStore Classic / Sideloadly 使用自己的 Apple 账号签名并安装，不需要提交 App Store，也不需要将 Apple 密码或签名证书放入仓库。

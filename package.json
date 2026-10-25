@@ -1,6 +1,6 @@
 {
   "name": "bilimusic-ios",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "BiliMusic iPhone sideload edition, based on HanversionOvO/BiliMusic v1.0.2",
@@ -24,7 +24,10 @@
     "react-dom": "19.1.0",
     "react-router-dom": "7.6.0"
   },
-  "overrides": { "motion-dom": "12.40.0", "motion-utils": "12.39.0" },
+  "overrides": {
+    "motion-dom": "12.40.0",
+    "motion-utils": "12.39.0"
+  },
   "devDependencies": {
     "@capacitor/cli": "8.5.3",
     "@tailwindcss/vite": "4.1.0",

@@ -50,6 +50,8 @@ final class NativePlayback {
     private var autoPlay = true
     private var lastError: String?
     private var loader: MediaResourceLoader?
+    private var sourceURLs: [URL] = []
+    private var sourceIndex = 0
     private var loadedTrackID = ""
     private var statusObservation: NSKeyValueObservation?
     private var controlObservation: NSKeyValueObservation?
@@ -113,7 +115,7 @@ final class NativePlayback {
         configure(options)
         shouldPlay = autoplay
         guard let track = track else {
-            generation += 1; loading = false; player.pause(); player.replaceCurrentItem(with: nil); loader?.close(); loader = nil; loadedTrackID = ""
+            generation += 1; loading = false; player.pause(); player.replaceCurrentItem(with: nil); loader?.close(); loader = nil; loadedTrackID = ""; sourceURLs = []
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation]); emit(); return
         }
@@ -167,39 +169,54 @@ final class NativePlayback {
     }
 
     private func activateSession() throws {
-        let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playback, mode: .default, options: [.allowAirPlay])
-        try session.setActive(true)
+        do { try PlaybackAudioSession.activate() }
+        catch { let detail = error as NSError; throw BiliError.message("音频输出启动失败（\(detail.code)）：\(detail.localizedDescription)") }
     }
     private func loadCurrent(position: Double) {
         guard let selected = track else { return }
         generation += 1; let requestGeneration = generation
-        loading = true; lastError = nil; player.pause(); publish()
+        loading = true; lastError = nil; sourceURLs = []; player.pause(); publish()
         Task {
             do {
-                let url = try await BiliNetwork.shared.resolve(selected)
+                let urls = try await BiliNetwork.shared.resolveSources(selected)
                 guard requestGeneration == generation else { return }
-                loader?.close()
-                let resourceLoader = MediaResourceLoader(); loader = resourceLoader
-                let item = AVPlayerItem(asset: resourceLoader.asset(url))
-                statusObservation = item.observe(\.status, options: [.initial, .new]) { [weak self] observed, _ in
-                    Task { @MainActor in
-                        guard let self = self, requestGeneration == self.generation else { return }
-                        if observed.status == .failed { self.fail(observed.error ?? BiliError.message("音频加载失败，请重试")) }
-                        if observed.status == .readyToPlay {
-                            self.loading = false
-                            if position > 0 { self.seek(position) }
-                            if self.shouldPlay { self.play() } else { self.publish() }
-                        }
-                    }
-                }
-                loadedTrackID = selected.id
-                player.replaceCurrentItem(with: item)
-                if shouldPlay { try activateSession(); player.play() }
-                updateArtwork(selected)
-                publish()
+                sourceURLs = urls; sourceIndex = 0
+                openSource(position: position, requestGeneration: requestGeneration)
             } catch { if requestGeneration == generation { fail(error) } }
         }
+    }
+    private func openSource(position: Double, requestGeneration: Int) {
+        guard requestGeneration == generation, sourceURLs.indices.contains(sourceIndex), let selected = track else { return }
+        statusObservation = nil
+        player.pause(); player.replaceCurrentItem(with: nil)
+        loader?.close()
+        let resourceLoader = MediaResourceLoader(); loader = resourceLoader
+        let item = AVPlayerItem(asset: resourceLoader.asset(sourceURLs[sourceIndex]))
+        loading = true
+        loadedTrackID = selected.id
+        player.replaceCurrentItem(with: item)
+        statusObservation = item.observe(\.status, options: [.initial, .new]) { [weak self] observed, _ in
+            Task { @MainActor in
+                guard let self = self, requestGeneration == self.generation, observed === self.player.currentItem else { return }
+                if observed.status == .failed {
+                    if self.sourceIndex + 1 < self.sourceURLs.count {
+                        let time = self.player.currentTime().seconds
+                        self.sourceIndex += 1
+                        self.openSource(position: time.isFinite && time > 0 ? time : position, requestGeneration: requestGeneration)
+                    } else { self.fail(observed.error ?? BiliError.message("音频加载失败，请重试")) }
+                    return
+                }
+                if observed.status == .readyToPlay {
+                    self.loading = false
+                    if position > 0 { self.seek(position) }
+                    if self.shouldPlay { self.play() } else { self.publish() }
+                }
+            }
+        }
+        do { if shouldPlay { try activateSession(); player.play() } }
+        catch { fail(error); return }
+        updateArtwork(selected)
+        publish()
     }
     private func fail(_ error: Error) { loading = false; shouldPlay = false; player.pause(); lastError = error.localizedDescription; publish() }
     private func duration() -> Double {

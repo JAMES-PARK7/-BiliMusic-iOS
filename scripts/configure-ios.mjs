@@ -12,7 +12,7 @@ project.parseSync()
 const group = Object.entries(project.hash.project.objects.PBXGroup).find(([, value]) => value && typeof value === 'object' && value.path === 'App')?.[0]
 if (!group) throw new Error('App group was not found')
 const target = project.getFirstTarget().uuid
-for (const name of ['BiliNetwork.swift', 'MediaResourceLoader.swift', 'NativePlayerPlugin.swift', 'BiliBridgePlugin.swift', 'AppBridgeViewController.swift']) {
+for (const name of ['BiliNetwork.swift', 'MediaResourceLoader.swift', 'PlaybackAudioSession.swift', 'NativePlayerPlugin.swift', 'BiliBridgePlugin.swift', 'AppBridgeViewController.swift']) {
   if (!project.hasFile(name)) project.addSourceFile(name, { target }, group)
 }
 for (const value of Object.values(project.hash.project.objects.PBXFileReference)) {
