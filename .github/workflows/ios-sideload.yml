@@ -34,7 +34,7 @@ jobs:
         run: npm run ios:sync
       - name: Check native project configuration
         run: npm run verify:project
-      - name: Test audio session, CDN fallback and native AAC playback on iOS
+      - name: Test iOS playback, lyrics, search and UP space flows
         run: bash scripts/test-ios-playback.sh
       - name: Compile unsigned iPhone IPA
         run: bash scripts/build-unsigned-ipa.sh

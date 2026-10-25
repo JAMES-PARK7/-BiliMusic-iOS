@@ -10,6 +10,7 @@ public class BiliBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "request", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "login", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openUserSpace", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "sessionStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "logout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "download", returnType: CAPPluginReturnPromise),
@@ -49,6 +50,22 @@ public class BiliBridgePlugin: CAPPlugin, CAPBridgedPlugin {
                 for cookie in cookies where BiliPolicy.matches(cookie.domain.trimmingCharacters(in: CharacterSet(charactersIn: ".")), "bilibili.com") { group.enter(); store.delete(cookie) { group.leave() } }
                 group.notify(queue: .main) { call.resolve() }
             }
+        }
+    }
+    @objc func openUserSpace(_ call: CAPPluginCall) {
+        guard let mid = call.getString("mid"), let numericID = UInt64(mid), numericID > 0,
+              let url = URL(string: "https://space.bilibili.com/\(numericID)/video") else { call.reject("UP 主信息无效"); return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, let presenter = self.bridge?.viewController else { call.reject("无法打开官方主页"); return }
+            guard self.loginController == nil else { call.reject("请先关闭已打开的页面"); return }
+            let controller = BiliLoginViewController(url: url, pageTitle: "UP 主官方主页") { [weak self] _ in
+                self?.loginController = nil
+                call.resolve()
+            }
+            self.loginController = controller
+            let navigation = UINavigationController(rootViewController: controller)
+            navigation.modalPresentationStyle = .fullScreen
+            presenter.present(navigation, animated: true)
         }
     }
     @objc func download(_ call: CAPPluginCall) {
@@ -97,13 +114,15 @@ public class BiliBridgePlugin: CAPPlugin, CAPBridgedPlugin {
 
 private final class BiliLoginViewController: UIViewController, WKNavigationDelegate {
     private let completion: (Bool) -> Void
+    private let initialURL: URL
+    private let pageTitle: String
     private let webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
     private var finished = false
-    init(completion: @escaping (Bool) -> Void) { self.completion = completion; super.init(nibName: nil, bundle: nil) }
+    init(url: URL = URL(string: "https://passport.bilibili.com/h5-app/passport/login")!, pageTitle: String = "登录 Bilibili", completion: @escaping (Bool) -> Void) { self.initialURL = url; self.pageTitle = pageTitle; self.completion = completion; super.init(nibName: nil, bundle: nil) }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "登录 Bilibili"
+        title = pageTitle
         webView.navigationDelegate = self; view = webView
         navigationItem.leftBarButtonItem = UIBarButtonItem(title: "取消", style: .plain, target: self, action: #selector(cancel))
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "完成", style: .done, target: self, action: #selector(done))
@@ -112,7 +131,8 @@ private final class BiliLoginViewController: UIViewController, WKNavigationDeleg
             group.enter(); webView.configuration.websiteDataStore.httpCookieStore.setCookie(cookie) { group.leave() }
         }
         group.notify(queue: .main) { [weak self] in
-            if let url = URL(string: "https://passport.bilibili.com/h5-app/passport/login") { self?.webView.load(URLRequest(url: url)) }
+            guard let self = self else { return }
+            self.webView.load(URLRequest(url: self.initialURL))
         }
     }
     @objc private func cancel() { finish(false) }

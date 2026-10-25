@@ -13,6 +13,8 @@ import {
   type UpVideo,
 } from '@/services/api'
 import type { Track } from '@/types'
+import { BiliBridge, isNativeIOS } from '@/platform/native'
+import { useAuth } from '@/contexts/AuthContext'
 
 type SearchType = 'video' | 'user'
 type SelectedUser = { mid: number; name: string; avatar: string }
@@ -559,6 +561,10 @@ function UserCard({ user, onEnter }: { user: UserResult; onEnter: () => void }) 
     <motion.div
       className="apple-search-row user-row"
       onClick={onEnter}
+      role="button"
+      tabIndex={0}
+      aria-label={`进入${user.name}的主页`}
+      onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onEnter() } }}
       variants={itemMotion}
       whileHover={{ y: -1 }}
       whileTap={{ scale: 0.995 }}
@@ -585,46 +591,75 @@ function UserCard({ user, onEnter }: { user: UserResult; onEnter: () => void }) 
 }
 
 function UserSpaceView({ user, onBack }: { user: SelectedUser; onBack: () => void }) {
+  const { checkLogin } = useAuth()
   const [videos, setVideos] = useState<UpVideo[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadMoreError, setLoadMoreError] = useState('')
+  const [openingOfficial, setOpeningOfficial] = useState(false)
   const pageRef = useRef(1)
+  const cursorRef = useRef<string | undefined>(undefined)
+  const generationRef = useRef(0)
+  const loadingMoreRef = useRef(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const player = usePlayer()
 
   const load = useCallback(async () => {
+    const generation = ++generationRef.current
     setLoading(true)
     setError(null)
+    setVideos([]); setHasMore(false); setLoadMoreError(''); setTotal(0)
+    setLoadingMore(false); loadingMoreRef.current = false; cursorRef.current = undefined
     pageRef.current = 1
     try {
       const data = await getUserVideos(user.mid, 1, 30)
+      if (generation !== generationRef.current) return
       setVideos(data.items)
       setTotal(data.total)
+      setHasMore(data.hasMore); cursorRef.current = data.nextCursor
     } catch (e: any) {
-      setError(e.message || '加载失败')
+      if (generation === generationRef.current) setError(e.message || '投稿暂时无法加载，请稍后重试')
     } finally {
-      setLoading(false)
+      if (generation === generationRef.current) setLoading(false)
     }
   }, [user.mid])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { void load(); return () => { generationRef.current++ } }, [load])
 
-  const loadMore = useCallback(async () => {
-    if (loadingMore || videos.length === 0 || videos.length >= total) return
+  const openOfficial = useCallback(async () => {
+    setOpeningOfficial(true)
+    try {
+      if (isNativeIOS) {
+        await BiliBridge.openUserSpace({ mid: String(user.mid) })
+        await checkLogin()
+        await load()
+      } else { window.open(`https://space.bilibili.com/${user.mid}/video`, '_blank', 'noopener') }
+    } catch { setError('官方主页暂时无法打开，请稍后重试') }
+    finally { setOpeningOfficial(false) }
+  }, [load, user.mid, checkLogin])
+
+  const loadMore = useCallback(async (manual = false) => {
+    if (loading || loadingMoreRef.current || !hasMore || !cursorRef.current || (loadMoreError && !manual)) return
+    const generation = generationRef.current
+    loadingMoreRef.current = true
     setLoadingMore(true)
+    setLoadMoreError('')
     try {
       const nextPage = pageRef.current + 1
-      const data = await getUserVideos(user.mid, nextPage, 30)
+      const data = await getUserVideos(user.mid, nextPage, 30, cursorRef.current)
+      if (generation !== generationRef.current) return
       pageRef.current = nextPage
-      setVideos(prev => [...prev, ...data.items])
-    } catch {
-      // 追加失败不影响已经加载的投稿。
+      setVideos(prev => [...new Map([...prev, ...data.items].map(video => [video.bvid, video])).values()])
+      setHasMore(data.hasMore); cursorRef.current = data.nextCursor
+    } catch (error) {
+      if (generation === generationRef.current) setLoadMoreError(error instanceof Error ? error.message : '加载更多失败，请重试')
     } finally {
-      setLoadingMore(false)
+      if (generation === generationRef.current) { loadingMoreRef.current = false; setLoadingMore(false) }
     }
-  }, [loadingMore, videos.length, total, user.mid])
+  }, [loading, hasMore, loadMoreError, user.mid])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -668,6 +703,7 @@ function UserSpaceView({ user, onBack }: { user: SelectedUser; onBack: () => voi
           <h2>{user.name}</h2>
           {total > 0 && <span>共 {total.toLocaleString()} 个投稿</span>}
         </div>
+        <button type="button" className="apple-user-official" disabled={openingOfficial} onClick={() => void openOfficial()}>{openingOfficial ? '正在打开…' : '官方主页'}</button>
         {videos.length > 0 && (
           <motion.button
             type="button"
@@ -685,7 +721,7 @@ function UserSpaceView({ user, onBack }: { user: SelectedUser; onBack: () => voi
       {loading ? (
         <LoadingRows type="video" />
       ) : error ? (
-        <EmptyState title={error} caption="稍后再试或重新加载" icon={<X size={30} />} action={<button onClick={load}>重试</button>} />
+        <EmptyState title="暂时无法加载投稿" caption={error} icon={<X size={30} />} action={<div className="mobile-space-actions"><button type="button" onClick={() => void load()}>重新加载</button><button type="button" disabled={openingOfficial} onClick={() => void openOfficial()}>打开官方主页</button></div>} />
       ) : (
         <>
           <motion.div className="apple-search-list" variants={listMotion} initial="initial" animate="animate">
@@ -699,15 +735,15 @@ function UserSpaceView({ user, onBack }: { user: SelectedUser; onBack: () => voi
             ))}
           </motion.div>
 
+          {videos.length === 0 && <EmptyState title="暂时没有可播放的投稿" caption="可打开官方主页查看该 UP 主的公开内容" icon={<Video size={30} />} />}
+
           <div ref={sentinelRef} style={{ height: 1 }} />
           {loadingMore && (
             <div className="apple-search-more">
               <Loader2 size={22} className="spin" />
             </div>
           )}
-          {videos.length >= total && videos.length > 0 && (
-            <div className="apple-search-end">已加载全部 {total.toLocaleString()} 个投稿</div>
-          )}
+          {loadMoreError ? <div className="apple-search-end" role="status"><p>{loadMoreError}</p><button type="button" className="apple-search-retry" onClick={() => void loadMore(true)}>重试加载更多</button></div> : hasMore ? <div className="apple-search-end"><button type="button" className="apple-search-retry" disabled={loadingMore} onClick={() => void loadMore(true)}>加载更多投稿</button></div> : videos.length > 0 && <div className="apple-search-end">已加载完毕，共 {videos.length.toLocaleString()} 条投稿</div>}
         </>
       )}
     </section>

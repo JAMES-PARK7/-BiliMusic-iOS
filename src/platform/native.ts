@@ -40,6 +40,7 @@ export interface DownloadedFile { name: string; size: number }
 interface BiliBridgeAPI {
   request(options: { url: string }): Promise<{ status: number; data: unknown }>
   login(): Promise<{ isLoggedIn: boolean }>
+  openUserSpace(options: { mid: string }): Promise<void>
   sessionStatus(): Promise<{ isLoggedIn: boolean }>
   logout(): Promise<void>
   download(options: { track: Track }): Promise<DownloadedFile>

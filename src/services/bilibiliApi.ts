@@ -280,16 +280,57 @@ export interface SpaceVideo {
 export interface SpaceArcSearchData {
   list: { vlist: SpaceVideo[] }
   page: { pn: number; ps: number; count: number }
+  hasMore?: boolean
+  nextCursor?: string
 }
 
-// UP主 投稿列表：/x/space/wbi/arc/search 同样需 WBI 签名
-// 渲染进程（完整 Chromium 指纹 + Cookie）可绕过该接口的 -352 风控
+interface SpaceMediaEntry {
+  id?: number; bv_id?: string; bvid?: string; title?: string; cover?: string
+  duration?: number; pubtime?: number; intro?: string
+  upper?: { mid: number | string; name?: string }
+  cnt_info?: { play?: number }
+}
+
+async function getUserVideoPlaylist(mid: number, page: number, pageSize: number, cursor?: string): Promise<SpaceArcSearchData> {
+  const previous = cursor?.startsWith('playlist:') ? cursor.slice('playlist:'.length) : ''
+  const data = await biliFetch<{ media_list: SpaceMediaEntry[]; has_more: boolean; total_count?: number }>('/x/v2/medialist/resource/list', {
+    params: { type: 1, biz_id: mid, tid: 0, desc: 'true', mobi_app: 'web', ps: pageSize, with_current: 'false', bvid: previous },
+  })
+  if (!Array.isArray(data?.media_list)) throw new Error('投稿列表数据暂不可用')
+  if (!data.media_list.length && Number(data.total_count) > 0) throw new Error('投稿列表数据暂不可用')
+  const owned = data.media_list.filter(row => Number(row.upper?.mid) === mid && (row.bv_id || row.bvid)?.startsWith('BV'))
+  if (data.media_list.length && !owned.length) throw new Error('投稿列表数据暂不可用')
+  const videos: SpaceVideo[] = owned.map(row => {
+    const duration = Math.max(0, Math.floor(Number(row.duration) || 0))
+    return { aid: Number(row.id) || 0, bvid: (row.bv_id || row.bvid)!, title: row.title || '', pic: row.cover || '', length: Math.floor(duration / 60) + ':' + String(duration % 60).padStart(2, '0'), play: Number(row.cnt_info?.play) || 0, created: Number(row.pubtime) || 0, description: row.intro || '', author: row.upper?.name || '' }
+  })
+  const last = videos[videos.length - 1]?.bvid
+  const hasMore = data.has_more === true && Boolean(last) && last !== previous
+  return { list: { vlist: videos }, page: { pn: page, ps: pageSize, count: Number(data.total_count) || 0 }, hasMore, nextCursor: hasMore ? 'playlist:' + last : undefined }
+}
+
+function userSpaceFailure(): Error {
+  return new Error('B站暂时无法提供投稿列表。请稍后重试，或打开官方主页完成登录／验证后再回来。')
+}
+
+// Keep the continuation tied to its source; changing endpoints mid-pagination
+// could skip uploads or repeat the first page.
 export async function getUserVideos(
   mid: number,
   page = 1,
   pageSize = 30,
   order: 'pubdate' | 'click' = 'pubdate',
+  cursor?: string,
 ): Promise<SpaceArcSearchData> {
+  if (cursor?.startsWith('playlist:')) {
+    try { return await getUserVideoPlaylist(mid, page, pageSize, cursor) }
+    catch { throw userSpaceFailure() }
+  }
+  if (page === 1 && order === 'pubdate' && !cursor) {
+    try { return await getUserVideoPlaylist(mid, page, pageSize) }
+    catch { /* Try the standard upload endpoint once for this first page. */ }
+  }
+  try {
   const query = await encodeWbi({ mid, pn: page, ps: pageSize, order, platform: 'web' })
   const resp = await fetch(`${BILI_API}/x/space/wbi/arc/search?${query}`, {
     credentials: 'include',
@@ -299,7 +340,12 @@ export async function getUserVideos(
   if (data.code !== 0) {
     throw new BiliApiError(data.code, data.message, '/x/space/wbi/arc/search')
   }
-  return data.data as SpaceArcSearchData
+  const result = data.data as SpaceArcSearchData
+  if (!Array.isArray(result?.list?.vlist)) throw new Error('投稿列表数据暂不可用')
+  if (page === 1 && !result.list.vlist.length && Number(result.page?.count) > 0) throw new Error('投稿列表数据暂不可用')
+  const hasMore = page * pageSize < Number(result.page?.count || 0) && result.list.vlist.length > 0
+  return { ...result, hasMore, nextCursor: hasMore ? 'uploads:' + (page + 1) : undefined }
+  } catch { throw userSpaceFailure() }
 }
 
 // ===== 视频详情 =====

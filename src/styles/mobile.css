@@ -48,6 +48,12 @@ input, select, textarea { font-size: 16px; }
 .mobile-player-actions button[aria-pressed=true] { font-weight: 700; text-decoration: underline; text-underline-offset: 5px; }
 .mobile-search-submit { flex-shrink: 0; border: 0; background: var(--mobile-accent); color: #fff; border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 600; }
 .mobile-search-submit:disabled { opacity: .5; }
+.apple-user-official { border: 1px solid var(--color-border); background: var(--glass-bg); color: var(--color-foreground); border-radius: 12px; padding: 10px 14px; min-height: 42px; font-size: 13px; cursor: pointer; }
+.apple-user-official:disabled { opacity: .5; }
+.mobile-space-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.apple-user-space .apple-search-state h3 { font-size: 22px; }
+.apple-user-space .apple-search-state p { max-width: 34em; line-height: 1.7; }
+@media (max-width: 767px) { .apple-user-hero { flex-wrap: wrap; gap: 12px; } .apple-user-info { min-width: 120px; } }
 .mobile-toast { position: fixed; z-index: 250; left: 20px; right: 20px; bottom: calc(150px + env(safe-area-inset-bottom)); padding: 14px 18px; border-radius: 14px; background: #26262dec; color: #fff; font-size: 13px; line-height: 1.5; text-align: center; }
 .mobile-library-shortcuts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
 .mobile-library-shortcuts a { display: flex; align-items: center; gap: 10px; padding: 18px 14px; text-decoration: none; color: inherit; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; }

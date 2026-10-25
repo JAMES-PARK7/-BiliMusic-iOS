@@ -328,9 +328,9 @@ function parseLength(len: string): number {
   return 0
 }
 
-export async function getUserVideos(mid: number, page = 1, pageSize = 30): Promise<{ items: UpVideo[]; total: number }> {
+export async function getUserVideos(mid: number, page = 1, pageSize = 30, cursor?: string): Promise<{ items: UpVideo[]; total: number; hasMore: boolean; nextCursor?: string }> {
   const { getUserVideos: rendererUserVideos } = await import('@/services/bilibiliApi')
-  const data = await rendererUserVideos(mid, page, pageSize)
+  const data = await rendererUserVideos(mid, page, pageSize, 'pubdate', cursor)
   const items = (data.list?.vlist || []).map((v) => ({
     bvid: v.bvid,
     title: v.title?.replace(/<[^>]+>/g, '') || '',
@@ -339,7 +339,7 @@ export async function getUserVideos(mid: number, page = 1, pageSize = 30): Promi
     play: v.play || 0,
     created: v.created || 0,
   }))
-  return { items, total: data.page?.count || 0 }
+  return { items, total: data.page?.count || 0, hasMore: data.hasMore === true, nextCursor: data.nextCursor }
 }
 
 // ===== 个性化推荐 =====

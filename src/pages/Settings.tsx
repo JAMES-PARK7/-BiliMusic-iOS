@@ -32,7 +32,7 @@ export default function Settings() {
       {message && <p role="status">{message}</p>}
     </section>
     <section><h2>存储</h2><p>下载的音频保存在“文件”App → 我的 iPhone → BiliMusic → BiliMusic。可在“资料库 → 本地下载”中分享文件。</p></section>
-    <section><h2>关于</h2><div className="mobile-settings-row"><strong>BiliMusic for iOS</strong><span>1.0.2</span></div><p>基于 HanversionOvO/BiliMusic 的非官方 iPhone 适配版。</p><p>通过 AltStore / Sideloadly 签名侧载安装，签名有效期由你的 Apple 开发者账号决定。</p></section>
+    <section><h2>关于</h2><div className="mobile-settings-row"><strong>BiliMusic for iOS</strong><span>1.0.3</span></div><p>基于 HanversionOvO/BiliMusic 的非官方 iPhone 适配版。</p><p>通过 AltStore / Sideloadly 签名侧载安装，签名有效期由你的 Apple 开发者账号决定。</p></section>
   </article>
 }
 
