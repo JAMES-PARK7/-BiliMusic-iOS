@@ -1,0 +1,55 @@
+name: Build iOS sideload IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-sideload-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26'
+      - name: Install dependencies
+        run: npm ci
+      - name: Check TypeScript and regression tests
+        run: npm test
+      - name: Build frontend and synchronize iOS resources
+        run: npm run ios:sync
+      - name: Check native project configuration
+        run: npm run verify:project
+      - name: Compile unsigned iPhone IPA
+        run: bash scripts/build-unsigned-ipa.sh
+      - name: Upload IPA for sideload signing
+        uses: actions/upload-artifact@v4
+        with:
+          name: BiliMusic-iOS-sideload
+          path: |
+            build/BiliMusic-iOS-unsigned.ipa
+            build/SHA256SUMS.txt
+            SIDELOAD.md
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload compilation log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: build/xcodebuild.log
+          if-no-files-found: ignore
