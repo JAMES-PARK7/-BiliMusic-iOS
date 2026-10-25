@@ -16,7 +16,7 @@ let package = Package(
             name: "PlaybackRegressionTests",
             dependencies: ["BiliMusicPlaybackCore"],
             path: "native-tests",
-            resources: [.copy("Fixtures")]
+            resources: [.copy("Fixtures"), .copy("Web")]
         )
     ]
 )

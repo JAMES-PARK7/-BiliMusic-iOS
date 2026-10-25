@@ -7,6 +7,7 @@ interface LyricsViewProps {
   currentTime: number
   synced: boolean
   onSeek: (time: number) => void
+  variant?: 'immersive' | 'surface'
 }
 
 // 二分：返回最后一个 time <= t 的下标
@@ -26,7 +27,8 @@ function activeIndexFor(lines: LyricLine[], t: number): number {
   return res
 }
 
-export default function LyricsView({ lines, currentTime, synced, onSeek }: LyricsViewProps) {
+export default function LyricsView({ lines, currentTime, synced, onSeek, variant = 'immersive' }: LyricsViewProps) {
+  const surface = variant === 'surface'
   const viewportRef = useRef<HTMLDivElement>(null)
   const lineRefs = useRef<(HTMLDivElement | null)[]>([])
   const userScrollingRef = useRef(false)
@@ -100,7 +102,7 @@ export default function LyricsView({ lines, currentTime, synced, onSeek }: Lyric
               fontSize: 'clamp(1.2rem, 1.6vw, 1.7rem)',
               fontWeight: 720,
               lineHeight: 1.7,
-              color: 'rgba(255,255,255,0.72)',
+              color: surface ? 'var(--color-foreground)' : 'rgba(255,255,255,0.72)',
               margin: '0 0 6px',
             }}
           >
@@ -141,13 +143,15 @@ export default function LyricsView({ lines, currentTime, synced, onSeek }: Lyric
           return (
             <motion.div
               key={i}
+              className="lyrics-line"
+              aria-current={isActive ? 'true' : undefined}
               ref={(el) => { lineRefs.current[i] = el }}
               onClick={() => onSeek(l.time)}
               animate={{
-                opacity: isActive ? 1 : isNear ? 0.46 : 0.22,
-                scale: isActive ? 1.075 : isNear ? 1.015 : 0.985,
-                x: isActive ? 14 : isNear ? 4 : 0,
-                filter: isActive ? 'blur(0px)' : isNear ? 'blur(0.5px)' : 'blur(1.5px)',
+                opacity: isActive ? 1 : surface ? (isNear ? 0.85 : 0.68) : isNear ? 0.46 : 0.22,
+                scale: surface ? 1 : isActive ? 1.075 : isNear ? 1.015 : 0.985,
+                x: surface ? 0 : isActive ? 14 : isNear ? 4 : 0,
+                filter: surface || isActive ? 'blur(0px)' : isNear ? 'blur(0.5px)' : 'blur(1.5px)',
               }}
               transition={{
                 type: 'spring',
@@ -158,13 +162,13 @@ export default function LyricsView({ lines, currentTime, synced, onSeek }: Lyric
               style={{
                 transformOrigin: 'left center',
                 cursor: 'pointer',
-                color: '#fff',
-                fontSize: 'clamp(1.46rem, 2.4vw, 2.42rem)',
+                color: surface ? (isActive ? 'var(--mobile-accent)' : 'var(--color-foreground)') : '#fff',
+                fontSize: surface ? 'clamp(1.3rem, 5.8vw, 1.9rem)' : 'clamp(1.46rem, 2.4vw, 2.42rem)',
                 fontWeight: 820,
                 lineHeight: 1.38,
                 padding: '10px 8px',
                 margin: 0,
-                textShadow: isActive ? '0 8px 34px rgba(0,0,0,0.44), 0 0 26px rgba(255,255,255,0.1)' : 'none',
+                textShadow: !surface && isActive ? '0 8px 34px rgba(0,0,0,0.44), 0 0 26px rgba(255,255,255,0.1)' : 'none',
               }}
             >
               {l.text}

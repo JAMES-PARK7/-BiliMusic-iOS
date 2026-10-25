@@ -43,6 +43,11 @@ input, select, textarea { font-size: 16px; }
 .mobile-note { text-align: center; font-size: 12px; opacity: .65; line-height: 1.6; }
 .mobile-lyrics { height: min(40vh, 350px); flex-shrink: 0; margin: 22px 0; min-height: 220px; overflow: hidden; }
 .mobile-lyrics > p { height: 100%; display: grid; place-items: center; opacity: .5; }
+.mobile-now-playing.has-lyrics .mobile-lyrics { flex: 1 0 160px; height: auto; min-height: 160px; margin: 12px 0; }
+.mobile-now-playing.has-lyrics > :not(.mobile-lyrics) { flex-shrink: 0; }
+.mobile-player-actions button[aria-pressed=true] { font-weight: 700; text-decoration: underline; text-underline-offset: 5px; }
+.mobile-search-submit { flex-shrink: 0; border: 0; background: var(--mobile-accent); color: #fff; border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 600; }
+.mobile-search-submit:disabled { opacity: .5; }
 .mobile-toast { position: fixed; z-index: 250; left: 20px; right: 20px; bottom: calc(150px + env(safe-area-inset-bottom)); padding: 14px 18px; border-radius: 14px; background: #26262dec; color: #fff; font-size: 13px; line-height: 1.5; text-align: center; }
 .mobile-library-shortcuts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
 .mobile-library-shortcuts a { display: flex; align-items: center; gap: 10px; padding: 18px 14px; text-decoration: none; color: inherit; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; }

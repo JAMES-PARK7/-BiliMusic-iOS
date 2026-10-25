@@ -36,9 +36,9 @@ export default function MobilePlayer() {
       <button className="mobile-icon" aria-label="播放队列" onClick={() => setQueueOpen(true)}><ListMusic /></button>
       <div className="mini-progress" style={{ width: (duration > 0 ? Math.min(100, progress / duration * 100) : 0) + '%' }} />
     </section>
-    {expanded && <section className="mobile-now-playing" role="dialog" aria-modal="true" aria-label="正在播放">
+    {expanded && <section className={'mobile-now-playing' + (lyricsOpen ? ' has-lyrics' : '')} role="dialog" aria-modal="true" aria-label="正在播放">
       <header><button className="mobile-icon" aria-label="收起播放器" onClick={close}><ChevronDown /></button><span>正在播放</span><button className="mobile-icon" aria-label="播放队列" onClick={() => setQueueOpen(true)}><ListMusic /></button></header>
-      {lyricsOpen ? <div className="mobile-lyrics">{lyrics.result?.lines.length ? <LyricsView lines={lyrics.result.lines} currentTime={progress} synced={lyrics.result.synced} onSeek={setProgress} /> : <p>{lyrics.status === 'loading' ? '正在寻找歌词…' : '暂无匹配歌词'}</p>}</div> : <div className="mobile-album">{track?.coverUrl ? <img src={track.coverUrl} alt={track.title} /> : <Music2 size={80} />}</div>}
+      {lyricsOpen ? <div className="mobile-lyrics" aria-label="歌词">{lyrics.result?.lines.length ? <LyricsView variant="surface" lines={lyrics.result.lines} currentTime={progress} synced={lyrics.result.synced} onSeek={setProgress} /> : <p>{lyrics.status === 'loading' ? '正在寻找歌词…' : '暂无匹配歌词'}</p>}</div> : <div className="mobile-album">{track?.coverUrl ? <img src={track.coverUrl} alt={track.title} /> : <Music2 size={80} />}</div>}
       <div className="mobile-track-heading"><div><h1>{track?.title || '未在播放'}</h1><p>{track?.artist || '选择一首音乐开始播放'}</p></div><button className={'mobile-icon ' + (track?.isLiked ? 'is-liked' : '')} disabled={!track} aria-label="喜欢" onClick={() => track && player.toggleLike(track.id)}><Heart fill={track?.isLiked ? 'currentColor' : 'none'} /></button></div>
       <input className="mobile-seek" type="range" aria-label="播放进度" min="0" max={duration || 1} step="0.1" value={Math.min(progress, duration || 1)} onChange={event => setProgress(Number(event.target.value))} />
       <div className="mobile-times"><span>{time(progress)}</span><span>{time(duration)}</span></div>
@@ -49,7 +49,7 @@ export default function MobilePlayer() {
         <button className="mobile-icon" aria-label="下一首" onClick={player.next}><SkipForward size={34} fill="currentColor" /></button>
         <button className={'mobile-icon ' + (player.repeatMode !== 'none' ? 'is-active' : '')} aria-label="循环模式" onClick={() => player.setRepeatMode(player.repeatMode === 'none' ? 'all' : player.repeatMode === 'all' ? 'one' : 'none')}>{player.repeatMode === 'one' ? <Repeat1 /> : <Repeat />}</button>
       </div>
-      <div className="mobile-player-actions"><button disabled={!track} onClick={() => setLyricsOpen(!lyricsOpen)}><Mic size={20} />歌词</button><button disabled={!track} onClick={() => track && openAddToPlaylist(track)}><ListPlus size={20} />歌单</button><button disabled={!track || !isNativeIOS || downloadMessage === '正在下载…'} onClick={() => void download()}><Download size={20} />下载</button></div>
+      <div className="mobile-player-actions"><button aria-pressed={lyricsOpen} disabled={!track} onClick={() => setLyricsOpen(!lyricsOpen)}><Mic size={20} />歌词</button><button disabled={!track} onClick={() => track && openAddToPlaylist(track)}><ListPlus size={20} />歌单</button><button disabled={!track || !isNativeIOS || downloadMessage === '正在下载…'} onClick={() => void download()}><Download size={20} />下载</button></div>
       {downloadMessage && <p className="mobile-note" role="status">{downloadMessage}</p>}
     </section>}
     <PlayQueue open={queueOpen} onClose={() => setQueueOpen(false)} />

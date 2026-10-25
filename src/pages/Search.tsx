@@ -344,20 +344,23 @@ export default function SearchPage() {
           </div>
         </div>
 
-        <div
+        <form
           className={`apple-search-input-shell ${isFocused ? 'is-focused' : ''} ${loading ? 'is-loading' : ''}`}
+          role="search"
+          onSubmit={event => { event.preventDefault(); void handleSearch() }}
         >
           <div className="apple-search-input-icon">
             {loading ? <Loader2 size={20} className="spin" /> : <Search size={20} />}
           </div>
           <input
-            type="text"
+            type="search"
+            enterKeyHint="search"
+            aria-label="搜索歌曲、艺人或视频"
             placeholder={searchType === 'video' ? '歌曲、艺人、视频' : 'UP 主、音乐人、频道'}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setTimeout(() => setIsFocused(false), 120)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
           <AnimatePresence>
             {query && (
@@ -376,7 +379,8 @@ export default function SearchPage() {
               </motion.button>
             )}
           </AnimatePresence>
-        </div>
+          <button type="submit" className="mobile-search-submit" disabled={loading || !query.trim()}>{loading ? '搜索中' : '搜索'}</button>
+        </form>
 
         <LayoutGroup>
           <div className="apple-search-segment" role="tablist" aria-label="搜索类型">
@@ -390,12 +394,14 @@ export default function SearchPage() {
         {error && (
           <motion.div
             className="apple-search-error"
+            role="alert"
             initial={{ opacity: 0, y: -8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
           >
             <X size={16} />
             <span>{error}</span>
+            <button type="button" onClick={() => void handleSearch()} disabled={loading}>重试搜索</button>
             <button onClick={() => setError(null)}>关闭</button>
           </motion.div>
         )}

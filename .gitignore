@@ -20,3 +20,5 @@ ios/**/DerivedData/
 /.build/
 /.swiftpm/
 /native-tests/Fixtures/tone.m4a
+/native-tests/Web/*
+!/native-tests/Web/README.md

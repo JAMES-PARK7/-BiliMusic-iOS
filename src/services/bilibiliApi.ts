@@ -146,6 +146,7 @@ async function getWbiKeys(): Promise<{ imgKey: string; subKey: string }> {
   const subUrl: string = json?.data?.wbi_img?.sub_url || ''
   const imgKey = imgUrl.slice(imgUrl.lastIndexOf('/') + 1).split('.')[0]
   const subKey = subUrl.slice(subUrl.lastIndexOf('/') + 1).split('.')[0]
+  if (imgKey.length !== 32 || subKey.length !== 32) throw new Error('搜索服务暂未就绪，请稍后重试')
   wbiKeysCache = { imgKey, subKey, ts: Date.now() }
   return { imgKey, subKey }
 }
@@ -207,22 +208,29 @@ export async function searchVideo(
   page = 1,
   pageSize = 20,
 ): Promise<SearchResponse> {
-  // 搜索接口需 WBI 签名，且必须发送与签名完全一致的 query（不能经 URL 再编码）
-  const query = await encodeWbi({
-    search_type: 'video',
-    keyword,
-    page,
-    page_size: pageSize,
-  })
-  const resp = await fetch(`${BILI_API}/x/web-interface/wbi/search/type?${query}`, {
-    credentials: 'include',
-    headers: { Referer: 'https://www.bilibili.com' },
-  })
-  const data = await resp.json()
-  if (data.code !== 0) {
-    throw new BiliApiError(data.code, data.message, '/x/web-interface/wbi/search/type')
+  return searchByType<SearchResponse>(keyword, 'video', page, pageSize)
+}
+
+async function searchByType<T extends { result: unknown[] }>(keyword: string, type: 'video' | 'bili_user', page: number, pageSize: number): Promise<T> {
+  const params = { search_type: type, keyword: keyword.trim(), page, page_size: pageSize }
+  let lastError: unknown
+  for (const signed of [false, true]) {
+    const path = signed ? '/x/web-interface/wbi/search/type' : '/x/web-interface/search/type'
+    try {
+      const query = signed ? await encodeWbi(params) : new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)])).toString()
+      const response = await fetch(`${BILI_API}${path}?${query}`, { credentials: 'include', headers: { Referer: 'https://www.bilibili.com/' } })
+      const json = await response.json()
+      if (json.code !== 0) throw new BiliApiError(json.code, json.message || '搜索服务暂不可用', path)
+      const data = json.data
+      if (data && Array.isArray(data.result)) return data as T
+      if (data?.numResults === 0 && !data.v_voucher) return { ...data, result: [] } as T
+      // Some responses carry code=0 but only verification metadata. They are
+      // unavailable responses, not a successful search with zero matches.
+      throw new Error('搜索服务未返回结果列表，请稍后重试或在设置中登录 Bilibili')
+    } catch (error) { lastError = error }
   }
-  return data.data as SearchResponse
+  if (lastError instanceof BiliApiError && [-352, -412, -403].includes(lastError.code)) throw new Error('搜索服务暂不可用，请在设置中登录 Bilibili 后重试')
+  throw lastError instanceof Error ? lastError : new Error('搜索暂不可用，请稍后重试')
 }
 
 // ===== 搜索 UP主 =====
@@ -252,21 +260,7 @@ export async function searchUser(
   page = 1,
   pageSize = 20,
 ): Promise<UserSearchResponse> {
-  const query = await encodeWbi({
-    search_type: 'bili_user',
-    keyword,
-    page,
-    page_size: pageSize,
-  })
-  const resp = await fetch(`${BILI_API}/x/web-interface/wbi/search/type?${query}`, {
-    credentials: 'include',
-    headers: { Referer: 'https://www.bilibili.com' },
-  })
-  const data = await resp.json()
-  if (data.code !== 0) {
-    throw new BiliApiError(data.code, data.message, '/x/web-interface/wbi/search/type')
-  }
-  return data.data as UserSearchResponse
+  return searchByType<UserSearchResponse>(keyword, 'bili_user', page, pageSize)
 }
 
 // ===== UP主 投稿视频 =====

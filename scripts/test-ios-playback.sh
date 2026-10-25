@@ -2,6 +2,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build native-tests/Fixtures
+mkdir -p native-tests/Web
+cp -R dist/. native-tests/Web/
 
 # Generate our own AAC audio instead of depending on a live Bilibili video.
 python3 - <<'PY'
