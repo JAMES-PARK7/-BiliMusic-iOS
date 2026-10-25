@@ -98,7 +98,7 @@ final class NativePlayback {
         }
     }
 
-    func configure(_ options: [String: Any]) {
+    func configure(_ options: [AnyHashable: Any]) {
         if let mode = options["repeatMode"] as? String, ["none", "one", "all"].contains(mode) { repeatMode = mode }
         if let value = options["shuffled"] as? Bool { if value != shuffled { played = Set(track.map { [$0.id] } ?? []) }; shuffled = value }
         if let value = options["autoPlay"] as? Bool { autoPlay = value }
@@ -106,7 +106,7 @@ final class NativePlayback {
         if let value = options["muted"] as? Bool { player.isMuted = value }
     }
 
-    func setQueue(_ nextTracks: [BiliTrack], index desiredIndex: Int, position: Double, autoplay: Bool, options: [String: Any]) {
+    func setQueue(_ nextTracks: [BiliTrack], index desiredIndex: Int, position: Double, autoplay: Bool, options: [AnyHashable: Any]) {
         let previousID = track?.id
         tracks = nextTracks
         index = min(max(0, desiredIndex), max(0, tracks.count - 1))
@@ -218,7 +218,7 @@ final class NativePlayback {
     }
     private func publish() {
         guard let track = track else { emit(); return }
-        let time = loadedTrackID == track?.id ? player.currentTime().seconds : 0
+        let time = loadedTrackID == track.id ? player.currentTime().seconds : 0
         var info: [String: Any] = [MPMediaItemPropertyTitle: track.title, MPMediaItemPropertyArtist: track.artist, MPMediaItemPropertyAlbumTitle: "BiliMusic", MPMediaItemPropertyPlaybackDuration: duration(), MPNowPlayingInfoPropertyElapsedPlaybackTime: time.isFinite ? time : 0, MPNowPlayingInfoPropertyPlaybackRate: shouldPlay && player.timeControlStatus == .playing ? 1.0 : 0.0]
         if let image = artwork, artworkID == track.id { info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image } }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
